@@ -2,7 +2,7 @@
 
 HOST_DATA_PATH=/mnt/resources
 DATA_PATH=/data
-CONFIG_PATH=/etc/btsync.json
+CONFIG_PATH=/data/btsync.conf
 CONFIG_INTERVAL_CHECK=5
 PID_PATH=/var/run/btsync.pid
 DEBUG="btsync:ctl"

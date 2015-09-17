@@ -107,7 +107,7 @@ export const global_options = {
         type: 'string'
     },
     'configPath': {
-        default: '/etc/btsync.json',
+        default: '/data/btsync.conf',
         type: 'string'
     },
 	'pidPath': {
@@ -146,7 +146,7 @@ const args = Yargs
             .help( 'help' )
             .argv
 
-        let config = generate_config( args )
+        let config = read_config( args )
 
 		debug( "Initializing config file" )
 
