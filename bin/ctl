@@ -2,11 +2,15 @@
 /* jshint esnext:true, asi:true */
 
 import Yargs from 'yargs'
+import path from 'path'
 import fs from 'fs'
 import os from 'os'
 import crypto from 'crypto'
 import pkg from '../package'
 import exec from 'sync-exec'
+import Debug from 'debug'
+
+const debug = Debug( "btsync:ctl" )
 
 export const generate_config = ( args ) => ({
 	device_name: args.name,
@@ -43,11 +47,14 @@ export const read_config = ( args ) => {
     try {
         let config_string = fs.readFileSync( args.configPath )
         config = JSON.parse( config_string )
+
+		debug( "Reading config from %s", args.configPath )
+
     } catch ( err ) {}
 
     return Object.assign(
         {},
-        generate_config( options ),
+        generate_config( args ),
         typeof config === 'object' ? config : {}
     )
 }
@@ -55,6 +62,7 @@ export const read_config = ( args ) => {
 export const save_config = ( config, args ) => {
     let config_string = JSON.stringify( config )
     fs.writeFileSync( args.configPath, config_string )
+	debug( "Config saved on %s", args.configPath )
 }
 
 export const global_options = {
@@ -121,7 +129,7 @@ const get_namespace = ( namespace, config ) => config
 const validate_namespace = ( namespace ) => {
     namespace = ( typeof namespace === 'string' && namespace || '' ).trim()
 
-    if ( ! args.namespace ) {
+    if ( ! namespace ) {
         throw new Error( "please give a valid namespace" )
     }
 
@@ -130,22 +138,27 @@ const validate_namespace = ( namespace ) => {
 
 const args = Yargs
     .version( pkg.version )
-    .usage( 'btsyncctl <commands> [options]' )
+    .usage( 'btsyncctl [options] <commands>' )
     .options( global_options )
 
     .command( 'init', "creates a config file", ( Yargs ) => {
         let args = Yargs
+    		.usage( 'btsyncctl [options] init' )
             .options( global_options )
             .help( 'help' )
             .argv
 
         let config = generate_config( args )
+
+		debug( "Initializing config file" )
+
         save_config( config, args )
     })
 
     .command( 'add', "adds a namespace", ( Yargs ) => {
         let args = Yargs
-            .options(Objet.assign({
+    		.usage( 'btsyncctl [options] add namespace' )
+            .options(Object.assign({
 
                 secret: {
                     default: ((str) => str.substr( 0, str.length - 2 ))(
@@ -163,10 +176,10 @@ const args = Yargs
         let config = read_config( args )
 
         // Validate namespace and folderPath
-        args.namespace = validate_namespace( args[0] )
+        args.namespace = validate_namespace( args._[1] || '' )
         args.folderPath = path.join( config.storage_path, args.namespace )
 
-        if ( get_namespace_index( namespace, config ) !== -1 ) {
+        if ( get_namespace_index( args.namespace, config ) !== -1 ) {
             throw new Error( "namespace already exists" )
         }
 
@@ -177,13 +190,16 @@ const args = Yargs
             generate_shared_folder( args )
         )
 
+		debug( "Added %s namespace", args.namespace )
+
         save_config( config, args )
 
     })
 
     .command( 'del', "deletes a namespace", ( Yargs ) => {
         let args = Yargs
-            .options(Objet.assign({
+    		.usage( 'btsyncctl [options] del namespace' )
+            .options(Object.assign({
 
             }, global_options))
 
@@ -194,9 +210,9 @@ const args = Yargs
         let config = read_config( args )
 
         // Validate namespace
-        args.namespace = validate_namespace( args[0] )
+        args.namespace = validate_namespace( args._[1] || '' )
 
-        let index = get_namespace_index( namespace, config )
+        let index = get_namespace_index( args.namespace, config )
         if ( index === -1 ) {
             throw new Error( "namespace doesn't exist" )
         }
@@ -204,13 +220,16 @@ const args = Yargs
         // Remove from configs
         config.shared_folders.splice( index, 1 )
 
+		debug( "Removed %s namespace", args.namespace )
+
         save_config( config, args )
 
     })
 
     .command( 'path', "returns a path", ( Yargs ) => {
         let args = Yargs
-            .options(Objet.assign({
+    		.usage( 'btsyncctl [options] path namespace' )
+            .options(Object.assign({
 
                 scope: {
                     default: 'host',
@@ -227,14 +246,14 @@ const args = Yargs
         let config = read_config( args )
 
         // Validate namespace
-        args.namespace = validate_namespace( args[0] )
+        args.namespace = validate_namespace( args._[1] || '' )
 
-        let index = get_namespace_index( namespace, config )
+        let index = get_namespace_index( args.namespace, config )
         if ( index === -1 ) {
             throw new Error( "namespace doesn't exist" )
         }
 
-        console.log(
+        debug(
             path.join(
                 (
                     args.scope === 'host' && args.hostDataPath ||
@@ -249,7 +268,8 @@ const args = Yargs
 
     .command( 'has', "exit status based on namespace existance", ( Yargs ) => {
         let args = Yargs
-            .options(Objet.assign({
+    		.usage( 'btsyncctl [options] has namespace' )
+            .options(Object.assign({
 
             }, global_options))
 
@@ -260,9 +280,9 @@ const args = Yargs
         let config = read_config( args )
 
         // Validate namespace
-        args.namespace = validate_namespace( args[0] )
+        args.namespace = validate_namespace( args._[1] || '' )
 
-        let index = get_namespace_index( namespace, config )
+        let index = get_namespace_index( args.namespace, config )
         if ( index === -1 ) {
             process.exit( 1 )
         }
@@ -271,7 +291,8 @@ const args = Yargs
 
     .command( 'list', "lists namespaces", ( Yargs ) => {
         let args = Yargs
-            .options(Objet.assign({
+    		.usage( 'btsyncctl [options] list namespace' )
+            .options(Object.assign({
 
             }, global_options))
             .help( 'help' )

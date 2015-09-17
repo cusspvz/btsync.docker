@@ -18,12 +18,12 @@ RUN \
     wget -O - http://download-cdn.getsyncapp.com/stable/linux-x64/BitTorrent-Sync_x64.tar.gz \
     | tar -xvz -C /usr/bin;
 
-ADD . /app
+ADD ./ /app
 RUN \
     cd /app; \
     npm install; \
-    ln -s /usr/local/bin/ctl /app/bin/ctl; \
-    ln -s /usr/local/bin/entrypoint /app/bin/entrypoint;
+    ln -s /app/bin/ctl /usr/local/bin/ctl; \
+    ln -s /app/bin/entrypoint /usr/local/bin/entrypoint; \
     chmod ugo+x /app/bin/*
 
 EXPOSE 55555

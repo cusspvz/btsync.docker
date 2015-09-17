@@ -5,6 +5,7 @@ DATA_PATH=/data
 CONFIG_PATH=/etc/btsync.json
 CONFIG_INTERVAL_CHECK=5
 PID_PATH=/var/run/btsync.pid
+DEBUG="btsync:ctl"
 
 # Prepare path for config file
 mkdir -p `basename "$CONFIG_PATH"`
@@ -27,6 +28,16 @@ running () {
     kill -0 $_PID > /dev/null 2>&1
 }
 
+close_service () {
+    _PID=$(cat $PID_PATH)
+    kill -9 $_PID > /dev/null 2>&1
+}
+
+exit_gracefully () {
+    close_service
+    exit $1
+}
+
 # If we got arguments, I suppose you want to control btsync, as so, lets pass
 # them to btsyncctl and exit with its value
 if [ "$1" == "ctl" ]; then
@@ -37,6 +48,9 @@ fi
 # Init config file
 ctl init
 
+# Trap signals
+trap "exit_gracefully 1" SIGINT SIGTERM
+
 # Start BTSync and handle reloads
 while true; do
 
@@ -46,7 +60,7 @@ while true; do
     # If there is a process running
     if [ "$_PID" != "" ]; then
         # Kill that b*tch
-        kill -9 $_PID > /dev/null 2>&1
+        close_service
 
         echo "Reloading btsync..."
     else
@@ -75,7 +89,9 @@ while true; do
     # If while has exited because of process problem, lets exit also
     if ! running; then
         echo "Error: btsync exited!!1"
-        exit 1
+        exit_gracefully 1
     fi
 
 done
+
+exit_gracefully 0

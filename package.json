@@ -9,6 +9,7 @@
   "author": "Jose Moreira <jose.moreira@findhit.com>",
   "license": "GPL-3.0",
   "dependencies": {
+    "debug": "^2.2.0",
     "sync-exec": "^0.6.2",
     "yargs": "^3.25.0"
   }

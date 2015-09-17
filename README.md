@@ -90,7 +90,7 @@ docker exec btsync ctl path "gitlab" # /mnt/resources/sync/gitlab
 Exits with 0 (has) or 1 (hasn't) indicating if namespace exists [or not]
 
 ```bash
-if docker exec btsync has "gitlab"; then
+if docker exec btsync ctl has "gitlab"; then
     echo "yeah, we already have that namespace"
 fi
 ```
