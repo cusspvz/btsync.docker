@@ -1,0 +1,294 @@
+#!/usr/local/bin/babel-node
+/* jshint esnext:true, asi:true */
+
+import Yargs from 'yargs'
+import fs from 'fs'
+import os from 'os'
+import crypto from 'crypto'
+import pkg from '../package'
+import exec from 'sync-exec'
+
+export const generate_config = ( args ) => ({
+	device_name: args.name,
+	listening_port: args.syncPort,
+	check_for_updates: args.autoUpdate,
+	use_upnp: args.useUpnp,
+	download_limit: args.downloadLimit,
+	upload_limit: args.uploadLimit,
+	storage_path: args.dataPath,
+	pid_file: args.pidPath,
+	webui: {
+		listen: "0.0.0.0:" + args.webPort,
+		login: "api",
+		password: "secret",
+	},
+	shared_folders: [],
+})
+
+export const generate_shared_folder = ( args ) => ({
+    namespace: args.namespace,
+    secret: args.secret,
+    dir: args.folderPath,
+
+    use_relay_server: true,
+    use_tracker: true,
+    use_dht: false,
+    search_lan: true,
+    use_sync_trash: true,
+})
+
+export const read_config = ( args ) => {
+    let config
+
+    try {
+        let config_string = fs.readFileSync( args.configPath )
+        config = JSON.parse( config_string )
+    } catch ( err ) {}
+
+    return Object.assign(
+        {},
+        generate_config( options ),
+        typeof config === 'object' ? config : {}
+    )
+}
+
+export const save_config = ( config, args ) => {
+    let config_string = JSON.stringify( config )
+    fs.writeFileSync( args.configPath, config_string )
+}
+
+export const global_options = {
+    'name': {
+        default: 'btsync-' + crypto
+            .createHash( 'md5' )
+            .update( Math.random() +'' )
+            .digest( 'hex' )
+            .substr( 0, 6 ),
+        type: 'string'
+    },
+    'syncPort': {
+        default: 55555,
+        type: 'integer'
+    },
+	'webPort': {
+        default: 8888,
+        type: 'integer'
+    },
+    'autoUpdate': {
+        default: true,
+        type: 'boolean'
+    },
+    'useUpnp': {
+        default: true,
+        type: 'boolean'
+    },
+    'downloadLimit': {
+        default: 0,
+        type: 'integer'
+    },
+    'uploadLimit': {
+        default: 0,
+        type: 'integer'
+    },
+
+    'hostDataPath': {
+        default: '/mnt/resource',
+        type: 'string'
+    },
+
+    'dataPath': {
+        default: '/data',
+        type: 'string'
+    },
+    'configPath': {
+        default: '/etc/btsync.json',
+        type: 'string'
+    },
+	'pidPath': {
+		default: '/var/run/btsync.pid',
+		type: 'string'
+	}
+}
+
+const get_namespace_index = ( namespace, config ) => config
+    .shared_folders
+    .map((sf) => sf.namespace)
+    .indexOf( namespace )
+
+const get_namespace = ( namespace, config ) => config
+    .shared_folders[ get_namespace_index( namespace ) ]
+
+const validate_namespace = ( namespace ) => {
+    namespace = ( typeof namespace === 'string' && namespace || '' ).trim()
+
+    if ( ! args.namespace ) {
+        throw new Error( "please give a valid namespace" )
+    }
+
+    return namespace
+}
+
+const args = Yargs
+    .version( pkg.version )
+    .usage( 'btsyncctl <commands> [options]' )
+    .options( global_options )
+
+    .command( 'init', "creates a config file", ( Yargs ) => {
+        let args = Yargs
+            .options( global_options )
+            .help( 'help' )
+            .argv
+
+        let config = generate_config( args )
+        save_config( config, args )
+    })
+
+    .command( 'add', "adds a namespace", ( Yargs ) => {
+        let args = Yargs
+            .options(Objet.assign({
+
+                secret: {
+                    default: ((str) => str.substr( 0, str.length - 2 ))(
+                        exec( 'btsync --generate-secret' ).stdout
+                    ),
+                    type: 'string'
+                }
+
+            }, global_options))
+
+            .demand( 1, 'Please provide a namespace' )
+            .help( 'help' )
+            .argv
+
+        let config = read_config( args )
+
+        // Validate namespace and folderPath
+        args.namespace = validate_namespace( args[0] )
+        args.folderPath = path.join( config.storage_path, args.namespace )
+
+        if ( get_namespace_index( namespace, config ) !== -1 ) {
+            throw new Error( "namespace already exists" )
+        }
+
+        // Creating a new one
+        exec( 'mkdir -p "'+ args.folderPath +'"' )
+
+        config.shared_folders.push(
+            generate_shared_folder( args )
+        )
+
+        save_config( config, args )
+
+    })
+
+    .command( 'del', "deletes a namespace", ( Yargs ) => {
+        let args = Yargs
+            .options(Objet.assign({
+
+            }, global_options))
+
+            .demand( 1, 'Please provide a namespace' )
+            .help( 'help' )
+            .argv
+
+        let config = read_config( args )
+
+        // Validate namespace
+        args.namespace = validate_namespace( args[0] )
+
+        let index = get_namespace_index( namespace, config )
+        if ( index === -1 ) {
+            throw new Error( "namespace doesn't exist" )
+        }
+
+        // Remove from configs
+        config.shared_folders.splice( index, 1 )
+
+        save_config( config, args )
+
+    })
+
+    .command( 'path', "returns a path", ( Yargs ) => {
+        let args = Yargs
+            .options(Objet.assign({
+
+                scope: {
+                    default: 'host',
+                    choices: [ 'host', 'container' ]
+                }
+
+            }, global_options))
+
+            .demand( 1, 'Please provide a namespace' )
+            .help( 'help' )
+            .argv
+
+
+        let config = read_config( args )
+
+        // Validate namespace
+        args.namespace = validate_namespace( args[0] )
+
+        let index = get_namespace_index( namespace, config )
+        if ( index === -1 ) {
+            throw new Error( "namespace doesn't exist" )
+        }
+
+        console.log(
+            path.join(
+                (
+                    args.scope === 'host' && args.hostDataPath ||
+                    args.scope === 'container' && args.dataPath ||
+                    '.'
+                ),
+                args.namespace
+            )
+        )
+
+    })
+
+    .command( 'has', "exit status based on namespace existance", ( Yargs ) => {
+        let args = Yargs
+            .options(Objet.assign({
+
+            }, global_options))
+
+            .demand( 1, 'Please provide a namespace' )
+            .help( 'help' )
+            .argv
+
+        let config = read_config( args )
+
+        // Validate namespace
+        args.namespace = validate_namespace( args[0] )
+
+        let index = get_namespace_index( namespace, config )
+        if ( index === -1 ) {
+            process.exit( 1 )
+        }
+
+    })
+
+    .command( 'list', "lists namespaces", ( Yargs ) => {
+        let args = Yargs
+            .options(Objet.assign({
+
+            }, global_options))
+            .help( 'help' )
+            .argv
+
+        let config = read_config( args )
+
+        console.log(
+            config
+            .shared_folders
+            .map((sf) => sf.namespace)
+            .join(' ')
+        )
+    })
+
+    .demand( 1, 'Please provide a command' )
+    .help( 'h' ).alias( 'h', 'help' )
+    .argv
+
+process.exit( 0 )

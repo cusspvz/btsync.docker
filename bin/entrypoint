@@ -1,0 +1,81 @@
+#!/bin/bash
+
+HOST_DATA_PATH=/mnt/resources
+DATA_PATH=/data
+CONFIG_PATH=/etc/btsync.json
+CONFIG_INTERVAL_CHECK=5
+PID_PATH=/var/run/btsync.pid
+
+# Prepare path for config file
+mkdir -p `basename "$CONFIG_PATH"`
+
+config_hash () {
+    md5sum $CONFIG_PATH
+}
+
+ctl () {
+    babel-node /app/bin/ctl \
+        --pid-path="$PID_PATH" \
+        --config-path="$CONFIG_PATH" \
+        --host-data-path="$HOST_DATA_PATH" \
+        --data-path="$DATA_PATH" \
+        $@
+}
+
+running () {
+    _PID=$(cat $PID_PATH)
+    kill -0 $_PID > /dev/null 2>&1
+}
+
+# If we got arguments, I suppose you want to control btsync, as so, lets pass
+# them to btsyncctl and exit with its value
+if [ "$1" == "ctl" ]; then
+    ctl ${@:2};
+    exit $?
+fi
+
+# Init config file
+ctl init
+
+# Start BTSync and handle reloads
+while true; do
+
+    # Get md5 hash of config file
+    _CONFIG_HASH=$(config_hash)
+
+    # If there is a process running
+    if [ "$_PID" != "" ]; then
+        # Kill that b*tch
+        kill -9 $_PID > /dev/null 2>&1
+
+        echo "Reloading btsync..."
+    else
+        echo "Starting btsync..."
+    fi
+
+    # Start BTSync instance
+    btsync --config "$CONFIG_PATH" & # > /dev/null &
+
+    sleep 1
+
+    # Until it is running, do constant checkings into config file
+    while running; do
+
+        # Wait for next check
+        sleep $CONFIG_INTERVAL_CHECK
+
+        # Check if config has changed
+        if [ "$(config_hash)" != "$_CONFIG_HASH" ]; then
+            # If so, lets break this while
+            break
+        fi
+
+    done
+
+    # If while has exited because of process problem, lets exit also
+    if ! running; then
+        echo "Error: btsync exited!!1"
+        exit 1
+    fi
+
+done

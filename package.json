@@ -1,0 +1,15 @@
+{
+  "name": "btsyncctl",
+  "version": "1.0.0",
+  "description": "btsync control",
+  "main": "bin/ctl.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Jose Moreira <jose.moreira@findhit.com>",
+  "license": "GPL-3.0",
+  "dependencies": {
+    "sync-exec": "^0.6.2",
+    "yargs": "^3.25.0"
+  }
+}
