@@ -34,7 +34,9 @@ close_service () {
 }
 
 exit_gracefully () {
+    echo "Exiting: Waiting for btsync..."
     close_service
+    echo "Exited! ?= $1"
     exit $1
 }
 

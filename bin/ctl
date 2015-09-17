@@ -30,13 +30,11 @@ export const generate_config = ( args ) => ({
 })
 
 export const generate_shared_folder = ( args ) => ({
-    namespace: args.namespace,
     secret: args.secret,
     dir: args.folderPath,
 
     use_relay_server: true,
     use_tracker: true,
-    use_dht: false,
     search_lan: true,
     use_sync_trash: true,
 })
@@ -120,7 +118,7 @@ export const global_options = {
 
 const get_namespace_index = ( namespace, config ) => config
     .shared_folders
-    .map((sf) => sf.namespace)
+    .map((sf) => path.basename(sf.dir))
     .indexOf( namespace )
 
 const get_namespace = ( namespace, config ) => config
@@ -303,7 +301,7 @@ const args = Yargs
         console.log(
             config
             .shared_folders
-            .map((sf) => sf.namespace)
+            .map((sf) => path.basename(sf.dir))
             .join(' ')
         )
     })
