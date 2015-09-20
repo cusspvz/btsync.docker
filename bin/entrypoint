@@ -110,9 +110,6 @@ while true; do
         # Wait for next check
         sleep $CONFIG_INTERVAL_CHECK
 
-        # Constat apply ownership
-        ownchk
-
         # Check if config has changed
         if [ "$(config_hash)" != "$_CONFIG_HASH" ]; then
             # If so, lets break this while

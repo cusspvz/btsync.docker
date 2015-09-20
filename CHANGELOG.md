@@ -1,4 +1,7 @@
-## Upcoming
+- Remove constant chown repair
+- Ignore `.log` files on git and docker
+
+## 1.0.2
 - Add uid and gid set on `docker run`.
 - Add ownership constant set
 
