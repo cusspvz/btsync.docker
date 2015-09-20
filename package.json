@@ -5,7 +5,7 @@
   "main": "bin/ctl.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "preversion": "git fetch origin; git checkout master; git reset --hard origin/master",
+    "preversion": "if git diff --quiet HEAD; then echo \"You have changes on your git, commit them and rerun npm version\"; exit 0; fi",
     "postversion": "sed -i -e \"1s/^/## $npm_package_version\n/\" CHANGELOG.md; git add CHANGELOG.md; git add package.json; git commit -m $npm_package_version; git push origin master; git push origin --tags; npm run docker-publish",
     "docker-publish": "docker build -t cusspvz/btsync:$npm_package_version; docker push cusspvz/btsync:$npm_package_version",
     "docker-publish-latest": "docker build -t cusspvz/btsync:latest; docker push cusspvz/btsync:latest"
