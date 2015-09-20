@@ -1,6 +1,6 @@
 {
   "name": "btsyncctl",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "btsync control",
   "main": "bin/ctl.js",
   "scripts": {
