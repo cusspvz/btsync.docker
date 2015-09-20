@@ -25,6 +25,8 @@ export const generate_config = ( args ) => ({
 		listen: "0.0.0.0:" + args.webPort,
 		login: "api",
 		password: "secret",
+		directory_root_policy: "belowroot",
+		force_https: "false",
 	},
 	shared_folders: [],
 })

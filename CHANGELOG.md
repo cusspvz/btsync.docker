@@ -1,3 +1,7 @@
+## Upcoming
+- Add uid and gid set on `docker run`.
+- Add ownership constant set
+
 ## 1.0.1
 - Added CHANGELOG.md (oh yeah, thats me b*tches)
 - Docker is now ignoring all `.md` files on build

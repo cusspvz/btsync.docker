@@ -3,12 +3,16 @@
 HOST_DATA_PATH=/mnt/resources
 DATA_PATH=/data
 CONFIG_PATH=/data/btsync.conf
-CONFIG_INTERVAL_CHECK=5
+CONFIG_INTERVAL_CHECK=10
 PID_PATH=/var/run/btsync.pid
 DEBUG="btsync:ctl"
 
-# Prepare path for config file
-mkdir -p `basename "$CONFIG_PATH"`
+# User related
+BTSYNC_USER=btysnc
+BTSYNC_UID=1000
+BTSYNC_GROUP=btysnc
+BTSYNC_GID=1000
+BTSYNC_HOME="$DATA_PATH"
 
 config_hash () {
     md5sum $CONFIG_PATH
@@ -24,6 +28,7 @@ ctl () {
 }
 
 running () {
+    [ ! -f "$PID_PATH" ] && return 1
     _PID=$(cat $PID_PATH)
     kill -0 $_PID > /dev/null 2>&1
 }
@@ -40,12 +45,29 @@ exit_gracefully () {
     exit $1
 }
 
+ownchk () {
+    chown -R ${BTSYNC_UID}:${BTSYNC_GID} ${DATA_PATH}
+}
+
 # If we got arguments, I suppose you want to control btsync, as so, lets pass
 # them to btsyncctl and exit with its value
 if [ "$1" == "ctl" ]; then
     ctl ${@:2};
     exit $?
 fi
+
+# Configure user
+echo "Configuring user: $BTSYNC_USER -> ${BTSYNC_UID}:${BTSYNC_GID}"
+groupadd --gid "$BTSYNC_GID" "$BTSYNC_GROUP"
+useradd --uid "$BTSYNC_UID" --gid "$BTSYNC_GID" --home "$BTSYNC_HOME" "$BTSYNC_USER"
+mkdir -p "$BTSYNC_HOME"
+
+# Configure PID file
+touch "$PID_PATH"
+chown ${BTSYNC_UID}:${BTSYNC_GID} "$PID_PATH"
+
+# Prepare path for config file
+mkdir -p `basename "$CONFIG_PATH"`
 
 # Init config file
 ctl init
@@ -69,8 +91,16 @@ while true; do
         echo "Starting btsync..."
     fi
 
+    # reset ownerships
+    ownchk
+
     # Start BTSync instance
-    btsync --config "$CONFIG_PATH" & # > /dev/null &
+    runuser \
+        -s /bin/bash \
+        -l "$BTSYNC_USER" \
+        -g "$BTSYNC_GROUP" \
+        -c \
+            "btsync --config $CONFIG_PATH" # > /dev/null &
 
     sleep 1
 
@@ -79,6 +109,9 @@ while true; do
 
         # Wait for next check
         sleep $CONFIG_INTERVAL_CHECK
+
+        # Constat apply ownership
+        ownchk
 
         # Check if config has changed
         if [ "$(config_hash)" != "$_CONFIG_HASH" ]; then
