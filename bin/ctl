@@ -26,7 +26,7 @@ export const generate_config = ( args ) => ({
 		login: "api",
 		password: "secret",
 		directory_root_policy: "belowroot",
-		force_https: "false",
+		force_https: false,
 	},
 	shared_folders: [],
 })
