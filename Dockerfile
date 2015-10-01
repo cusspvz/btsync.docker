@@ -5,6 +5,8 @@ ENV DEBIAN_FRONTEND noninteractive
 
 ########## BTSYNC ##########
 
+VOLUME [ "/data" ]
+
 RUN \
     apt-get update -y; \
 #    apt-get upgrade -y; \
