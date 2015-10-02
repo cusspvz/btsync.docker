@@ -1,11 +1,15 @@
 #!/bin/bash
 
-HOST_DATA_PATH=/mnt/resources
-DATA_PATH=/data
-CONFIG_PATH=/data/btsync.conf
-CONFIG_INTERVAL_CHECK=10
-PID_PATH=/var/run/btsync.pid
 DEBUG="btsync:ctl"
+
+DATA_PATH=/data
+HOST_DATA_PATH=/mnt/resources
+
+NFS="true"
+
+BTSYNC_PID_PATH=/var/run/btsync.pid
+BTSYNC_CONFIG_PATH=/data/btsync.conf
+BTSYNC_CONFIG_INTERVAL_CHECK=10
 
 # User related
 BTSYNC_USER=btysnc
@@ -15,32 +19,62 @@ BTSYNC_GID=1000
 BTSYNC_HOME="$DATA_PATH"
 
 config_hash () {
-    md5sum $CONFIG_PATH
+    md5sum $BTSYNC_CONFIG_PATH
 }
 
 ctl () {
     babel-node /app/bin/ctl \
-        --pid-path="$PID_PATH" \
-        --config-path="$CONFIG_PATH" \
+        --pid-path="$BTSYNC_PID_PATH" \
+        --config-path="$BTSYNC_CONFIG_PATH" \
         --host-data-path="$HOST_DATA_PATH" \
         --data-path="$DATA_PATH" \
         $@
 }
 
-running () {
-    [ ! -f "$PID_PATH" ] && return 1
-    _PID=$(cat $PID_PATH)
-    kill -0 $_PID > /dev/null 2>&1
+start_nfs_service () {
+    # Start nfs
+    if [ "$NFS" == "true" ]; then
+        echo "Starting NFS server"
+        echo "$DATA_PATH *(rw,insecure,async,no_subtree_check,no_root_squash)" > /etc/exports
+        /etc/init.d/nfsd start
+    fi
 }
 
-close_service () {
-    _PID=$(cat $PID_PATH)
-    kill -9 $_PID > /dev/null 2>&1
+stop_nfs_service () {
+    # Start nfs
+    if [ "$NFS" == "true" ]; then
+        echo "Stopping NFS server"
+        /etc/init.d/nfsd stop
+    fi
+}
+
+start_btsync_service () {
+    echo "Starting BTSync server"
+
+    sudo \
+        -u $BTSYNC_USER \
+        -g $BTSYNC_GROUP \
+        btsync --config $BTSYNC_CONFIG_PATH > /dev/null &
+
+    sleep 1
+}
+
+btsync_is_running () {
+    [ ! -f "$BTSYNC_PID_PATH" ] && return 1
+    BTSYNC_PID=$(cat $BTSYNC_PID_PATH)
+    kill -0 $BTSYNC_PID > /dev/null 2>&1
+}
+
+stop_btsync_service () {
+    echo "Stopping BTSync server"
+    BTSYNC_PID=$(cat $BTSYNC_PID_PATH)
+    kill -9 $BTSYNC_PID > /dev/null 2>&1
 }
 
 exit_gracefully () {
     echo "Exiting: Waiting for btsync..."
-    close_service
+    stop_nfs_service
+    stop_btsync_service
     echo "Exited! ?= $1"
     exit $1
 }
@@ -56,6 +90,11 @@ if [ "$1" == "ctl" ]; then
     exit $?
 fi
 
+if [ "$1" == "bootstrap" ]; then
+    ctl init;
+    ctl add --secret="$2" "$3";
+fi
+
 # Configure user
 echo "Configuring user: $BTSYNC_USER -> ${BTSYNC_UID}:${BTSYNC_GID}"
 groupadd --gid "$BTSYNC_GID" "$BTSYNC_GROUP"
@@ -63,63 +102,58 @@ useradd --uid "$BTSYNC_UID" --gid "$BTSYNC_GID" --home "$BTSYNC_HOME" "$BTSYNC_U
 mkdir -p "$BTSYNC_HOME"
 
 # Configure PID file
-touch "$PID_PATH"
-chown ${BTSYNC_UID}:${BTSYNC_GID} "$PID_PATH"
+touch "$BTSYNC_PID_PATH"
+chown ${BTSYNC_UID}:${BTSYNC_GID} "$BTSYNC_PID_PATH"
 
 # Prepare path for config file
-mkdir -p `basename "$CONFIG_PATH"`
+mkdir -p `basename "$BTSYNC_CONFIG_PATH"`
 
 # Init config file
-ctl init
+if [ "$1" != "bootstrap" ]; then
+    ctl init;
+fi
 
 # Trap signals
 trap "exit_gracefully 1" SIGINT SIGTERM
 
-# Start BTSync and handle reloads
+# Start other services
+start_nfs_service
+
+# Start BTSync and handle reloads based on config file
 while true; do
 
     # Get md5 hash of config file
     _CONFIG_HASH=$(config_hash)
 
-    # If there is a process running
-    if [ "$_PID" != "" ]; then
+    # If there is a process btsync_is_running
+    if [ "$BTSYNC_PID" != "" ]; then
         # Kill that b*tch
-        close_service
-
-        echo "Reloading btsync..."
-    else
-        echo "Starting btsync..."
+        stop_btsync_service
     fi
 
     # reset ownerships
     ownchk
 
     # Start BTSync instance
-    runuser \
-        -s /bin/bash \
-        -l "$BTSYNC_USER" \
-        -g "$BTSYNC_GROUP" \
-        -c \
-            "btsync --config $CONFIG_PATH" # > /dev/null &
-
-    sleep 1
+    start_btsync_service
 
     # Until it is running, do constant checkings into config file
-    while running; do
+    while btsync_is_running; do
 
         # Wait for next check
-        sleep $CONFIG_INTERVAL_CHECK
+        sleep $BTSYNC_CONFIG_INTERVAL_CHECK
 
         # Check if config has changed
         if [ "$(config_hash)" != "$_CONFIG_HASH" ]; then
             # If so, lets break this while
+            echo "Going to restart BTSync..."
             break
         fi
 
     done
 
     # If while has exited because of process problem, lets exit also
-    if ! running; then
+    if ! btsync_is_running; then
         echo "Error: btsync exited!!1"
         exit_gracefully 1
     fi

@@ -1,36 +1,46 @@
-FROM ubuntu:15.10
+FROM progrium/busybox:latest
 MAINTAINER José Moreira <jose.moreira@findhit.com>
 
-ENV DEBIAN_FRONTEND noninteractive
+########## GLOBAL ##########
+ENV ARCH=x64
+RUN opkg-install \
+    wget tar gzip bash \
+    shadow-groupadd shadow-useradd sudo \
+    base-files libstdcpp;
+
+# Remove default user and group
+RUN awk '!/default/' /etc/group > /etc/group.default; \
+    mv /etc/group.default /etc/group; \
+    awk '!/default/' /etc/shadow > /etc/shadow.default; \
+    mv /etc/shadow.default /etc/shadow; \
+    awk '!/default/' /etc/passwd > /etc/passwd.default; \
+    mv /etc/passwd.default /etc/passwd;
+
+########## NODE ##########
+ENV NODE_VERSION=0.12.0
+ENV NODE_TAR=http://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${ARCH}.tar.gz
+RUN mkdir -p /usr/local; \
+    wget -O - ${NODE_TAR} | gunzip | tar -x -C /usr/local --strip-components 1; \
+    npm i -g babel;
 
 ########## BTSYNC ##########
+ENV BTSYNC_TAR=http://download-cdn.getsyncapp.com/stable/linux-x64/BitTorrent-Sync_${ARCH}.tar.gz
+RUN mkdir -p /usr/bin; \
+    wget -O - ${BTSYNC_TAR} | gunzip | tar -x -C /usr/bin;
+EXPOSE 55555/tcp 8888/tcp
 
-VOLUME [ "/data" ]
+########## NFS ##########
+RUN opkg-install --force-depends nfs-kernel-server;
+EXPOSE 111/udp 2049/tcp
 
-RUN \
-    apt-get update -y; \
-#    apt-get upgrade -y; \
-    apt-get install -y \
-        wget nodejs nodejs-legacy npm \
-    ; \
-    npm i -g babel; \
-	rm -rf /var/lib/apt/lists/*
-
-RUN \
-    wget -O - http://download-cdn.getsyncapp.com/stable/linux-x64/BitTorrent-Sync_x64.tar.gz \
-    | tar -xvz -C /usr/bin;
-
+########## APP ##########
+WORKDIR /app
 ADD ./ /app
-RUN \
-    cd /app; \
+RUN cd /app; \
     npm install; \
-    ln -s /app/bin/ctl /usr/local/bin/ctl; \
-    ln -s /app/bin/entrypoint /usr/local/bin/entrypoint; \
+    ln -s /app/bin/ctl /sbin/ctl; \
+    ln -s /app/bin/entrypoint /sbin/entrypoint; \
     chmod ugo+x /app/bin/*
 
-EXPOSE 55555
-
-WORKDIR /app
-
-# Arguments: DIR SECRET
-ENTRYPOINT [ "/app/bin/entrypoint" ]
+VOLUME [ "/data" ]
+ENTRYPOINT [ "/sbin/entrypoint" ]
