@@ -5,7 +5,8 @@
   "main": "bin/ctl.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "preversion": "sed -i -e \"1s/^/\n\n## $npm_package_version\n/\" CHANGELOG.md; git add CHANGELOG.md;",
+    "changelog-tag": "sed -i -e \"1s/^## Upcoming/## Upcoming\\n\\n\\n## $npm_package_version/\" CHANGELOG.md",
+    "preversion": "npm run changelog-tag; git add CHANGELOG.md;",
     "postversion": "git push origin master; git push origin --tags"
   },
   "author": "Jose Moreira <jose.moreira@findhit.com>",
