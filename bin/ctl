@@ -23,8 +23,8 @@ export const generate_config = ( args ) => ({
 	pid_file: args.pidPath,
 	webui: {
 		listen: "0.0.0.0:" + args.webPort,
-		login: "api",
-		password: "secret",
+		login: args.webUser,
+		password: args.webPass,
 		directory_root_policy: "belowroot",
 	},
 	shared_folders: [],
@@ -80,6 +80,14 @@ export const global_options = {
 	'webPort': {
         default: 8888,
         type: 'integer'
+    },
+	'webUser': {
+		default: 'admin',
+        type: 'string'
+    },
+	'webPass': {
+		default: 'admin',
+        type: 'string'
     },
     'autoUpdate': {
         default: true,

@@ -1,5 +1,8 @@
 - Remove constant chown repair
 - Ignore `.log` files on git and docker
+- Removed `docker` based commands from `package.json`
+- Base Image is now `progrium/busybox`, which is based on `OpenWRT` distribution
+- Added nfs server for data dir
 
 ## 1.0.2
 - Add uid and gid set on `docker run`.
