@@ -1,0 +1,22 @@
+#!/bin/bash
+
+echo "Stopping NFS"
+
+# from /lib/systemd/system/nfs-server.service
+/usr/sbin/rpc.nfsd 0
+/usr/sbin/exportfs -au
+/usr/sbin/exportfs -f
+
+# from /lib/systemd/system/nfs-mountd.service
+kill $( pidof rpc.mountd )
+kill $( pidof rpcbind )
+kill $( pidof rpc.statd )
+
+# from /lib/systemd/system/proc-fs-nfsd.mount
+umount /proc/fs/nfsd
+
+echo > /etc/exports
+
+echo "NFS stopped"
+
+exit 0

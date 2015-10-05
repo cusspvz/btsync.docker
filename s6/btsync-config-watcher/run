@@ -1,0 +1,45 @@
+#!/bin/bash
+
+ctl init;
+
+config_hash () {
+    md5sum $BTSYNC_CONFIG_PATH
+}
+
+restarts=0
+
+# Start BTSync and handle reloads based on config file
+while true; do
+
+    # Get md5 hash of config file
+    _CONFIG_HASH=$(config_hash)
+
+    # Start/Restart BTSync instance
+    [ $restarts -eq 0 ] && echo "Starting BTSync" || echo "Restarting BTSync #$I"
+    s6-svc -wr -t /app/s6/btsync
+
+    sleep 2;
+
+    echo "Entering into sentinel mode, watching for config changes."
+
+    # Until it is running, do constant checkings into config file
+    while s6-svok /app/s6/btsync; do
+
+        # Wait for next check
+        sleep $BTSYNC_CONFIG_INTERVAL_CHECK
+
+        # Check if config has changed
+        if [ "$(config_hash)" != "$_CONFIG_HASH" ]; then
+
+            # Increment restart count
+            restarts++;
+
+            # If so, lets break this while
+            echo "Going to restart BTSync..."
+
+            break
+        fi
+
+    done
+
+done

@@ -1,5 +1,7 @@
 *.md
+Makefile
 Dockerfile
-node_modules
+node_modules/
 .*
 *.log
+test/

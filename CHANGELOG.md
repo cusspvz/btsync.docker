@@ -1,5 +1,8 @@
 ## Upcoming
-
+- Base Image changed to `cusspvz/node` which is based on Alpine and comes with
+  Node.js pre-compiled.
+- Applied S6 supervisor
+- Code that initializes NFS Server was refactored
 
 ## 1.2.0
 - Remove constant chown repair

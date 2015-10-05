@@ -50,6 +50,30 @@ achieve by mounting it as a volume: `-v /path/to/some/host/disk:/data`
 
 ### Launching btsync container
 
+#### As a NFS-redundant Stack Service (RECOMMENDED)
+
+```bash
+docker run \
+    --name btsync-nfs \
+    bootstrap SECRET_HERE some-third-party-image
+
+# Now you just have to make sure your image is able to mount it
+# In case the image you pretend doesn't do that, you could work around it by
+# replacing entrypoint and command. (Advanced users)
+docker run \
+    --name some-third-party-image \
+    -e CONTAINER_DATA_PATH=/container/data/path \
+    --entrypoint /bin/sh \
+    some-third-party-image: latest \
+    -s -c "mount -t nfs4 btsync-nfs:/some-third-party-image /container/data/path && /path/to/original/entrypoint and/or command;"
+```
+
+Shares are exposed on NFS root system, meaning that if you create a namespace
+called `yolo` (with `ctl add yolo`), you nfs mount command should look like:
+```
+mount -t nfs4 btsync.link.or.ip:/yolo /path/to/mount/on
+```
+
 #### As a Global Service way
 
 ```bash
@@ -80,24 +104,6 @@ docker run \
     --volumes-from my-app-name-data \
     -e DATA_DIR=/data/my-app-name \
     my-app-name
-```
-
-#### As a NFS-redundant Stack Service
-
-```bash
-docker run \
-    --name btsync-nfs \
-    bootstrap SECRET_HERE some-third-party-image
-
-# Now you just have to make sure your image is able to mount it
-# In case the image you pretend doesn't do that, you could work around it by
-# replacing entrypoint and command. (Advanced users)
-docker run \
-    --name some-third-party-image \
-    -e CONTAINER_DATA_PATH=/container/data/path \
-    --entrypoint /bin/sh \
-    some-third-party-image: latest \
-    -s -c "mount -t nfs btsync-nfs:/data/some-third-party-image /container/data/path && /path/to/original/entrypoint and/or command;"
 ```
 
 ## Accessing BTSync WebGUI

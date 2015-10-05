@@ -1,27 +1,5 @@
 #!/bin/bash
 
-DEBUG="btsync:ctl"
-
-DATA_PATH=/data
-HOST_DATA_PATH=/mnt/resources
-
-NFS="true"
-
-BTSYNC_PID_PATH=/var/run/btsync.pid
-BTSYNC_CONFIG_PATH=/data/btsync.conf
-BTSYNC_CONFIG_INTERVAL_CHECK=10
-
-# User related
-BTSYNC_USER=btysnc
-BTSYNC_UID=1000
-BTSYNC_GROUP=btysnc
-BTSYNC_GID=1000
-BTSYNC_HOME="$DATA_PATH"
-
-config_hash () {
-    md5sum $BTSYNC_CONFIG_PATH
-}
-
 ctl () {
     babel-node /app/bin/ctl \
         --pid-path="$BTSYNC_PID_PATH" \
@@ -31,62 +9,15 @@ ctl () {
         $@
 }
 
-start_nfs_service () {
-    # Start nfs
-    if [ "$NFS" == "true" ]; then
-        echo "Starting NFS server"
-        echo "$DATA_PATH *(rw,insecure,async,no_subtree_check,no_root_squash)" > /etc/exports
-        /etc/init.d/nfsd start
-    fi
-}
-
-stop_nfs_service () {
-    # Start nfs
-    if [ "$NFS" == "true" ]; then
-        echo "Stopping NFS server"
-        /etc/init.d/nfsd stop
-    fi
-}
-
-start_btsync_service () {
-    echo "Starting BTSync server"
-
-    sudo \
-        -u $BTSYNC_USER \
-        -g $BTSYNC_GROUP \
-        btsync --config $BTSYNC_CONFIG_PATH > /dev/null &
-
-    sleep 1
-}
-
-btsync_is_running () {
-    [ ! -f "$BTSYNC_PID_PATH" ] && return 1
-    BTSYNC_PID=$(cat $BTSYNC_PID_PATH)
-    kill -0 $BTSYNC_PID > /dev/null 2>&1
-}
-
-stop_btsync_service () {
-    echo "Stopping BTSync server"
-    BTSYNC_PID=$(cat $BTSYNC_PID_PATH)
-    kill -9 $BTSYNC_PID > /dev/null 2>&1
-}
-
-exit_gracefully () {
-    echo "Exiting: Waiting for btsync..."
-    stop_nfs_service
-    stop_btsync_service
-    echo "Exited! ?= $1"
-    exit $1
-}
-
-ownchk () {
-    chown -R ${BTSYNC_UID}:${BTSYNC_GID} ${DATA_PATH}
-}
-
 # If we got arguments, I suppose you want to control btsync, as so, lets pass
 # them to btsyncctl and exit with its value
 if [ "$1" == "ctl" ]; then
-    ctl ${@:2};
+    exec ctl ${@:2};
+    exit $?
+fi
+
+if [ "$1" == "bash" ]; then
+    exec bash ${@:2};
     exit $?
 fi
 
@@ -95,69 +26,39 @@ if [ "$1" == "bootstrap" ]; then
     ctl add --secret="$2" "$3";
 fi
 
-# Configure user
-echo "Configuring user: $BTSYNC_USER -> ${BTSYNC_UID}:${BTSYNC_GID}"
-groupadd --gid "$BTSYNC_GID" "$BTSYNC_GROUP"
-useradd --uid "$BTSYNC_UID" --gid "$BTSYNC_GID" --home "$BTSYNC_HOME" "$BTSYNC_USER"
-mkdir -p "$BTSYNC_HOME"
+# Dump variables to help development process
+echo
+echo "--"
+echo
+echo "Environment Variables"
+echo
+echo "DATA:"
+echo "- PATH: ${DATA_PATH}"
+echo "BTSYNC:"
+echo "- ACTIVE: true"
+echo "- CONFIG: INTERVAL@${BTSYNC_CONFIG_INTERVAL_CHECK} PATH@${BTSYNC_CONFIG_PATH}"
+echo "- USER: ${BTSYNC_UID} ${BTSYNC_USER} ${BTSYNC_HOME}"
+echo "- GROUP: ${BTSYNC_GID} ${BTSYNC_GROUP}"
+echo "NFS:"
+echo "- ACTIVE: $( [ ! -z "${NFS}" ] && echo "true" || "false" )"
+echo "- VERSION: ${NFS_VERSION}"
+echo
+echo "--"
+echo
 
-# Configure PID file
-touch "$BTSYNC_PID_PATH"
-chown ${BTSYNC_UID}:${BTSYNC_GID} "$BTSYNC_PID_PATH"
-
-# Prepare path for config file
-mkdir -p `basename "$BTSYNC_CONFIG_PATH"`
-
-# Init config file
-if [ "$1" != "bootstrap" ]; then
-    ctl init;
+# Activate nfs service in case we should use it
+if [ ! -z "${NFS}" ]; then
+    rm -f /app/s6/nfs/down
 fi
 
-# Trap signals
-trap "exit_gracefully 1" SIGINT SIGTERM
+# Configure user
+echo "Configuring user: $BTSYNC_USER -> ${BTSYNC_UID}:${BTSYNC_GID}"
+addgroup -g "$BTSYNC_GID" "$BTSYNC_GROUP"
+adduser -u "$BTSYNC_UID" -G "$BTSYNC_GROUP" -h "$BTSYNC_HOME" -D "$BTSYNC_USER"
+mkdir -p "$BTSYNC_HOME"
 
-# Start other services
-start_nfs_service
+# Own data folder
+chown -R ${BTSYNC_UID}:${BTSYNC_GID} ${DATA_PATH}
 
-# Start BTSync and handle reloads based on config file
-while true; do
-
-    # Get md5 hash of config file
-    _CONFIG_HASH=$(config_hash)
-
-    # If there is a process btsync_is_running
-    if [ "$BTSYNC_PID" != "" ]; then
-        # Kill that b*tch
-        stop_btsync_service
-    fi
-
-    # reset ownerships
-    ownchk
-
-    # Start BTSync instance
-    start_btsync_service
-
-    # Until it is running, do constant checkings into config file
-    while btsync_is_running; do
-
-        # Wait for next check
-        sleep $BTSYNC_CONFIG_INTERVAL_CHECK
-
-        # Check if config has changed
-        if [ "$(config_hash)" != "$_CONFIG_HASH" ]; then
-            # If so, lets break this while
-            echo "Going to restart BTSync..."
-            break
-        fi
-
-    done
-
-    # If while has exited because of process problem, lets exit also
-    if ! btsync_is_running; then
-        echo "Error: btsync exited!!1"
-        exit_gracefully 1
-    fi
-
-done
-
-exit_gracefully 0
+# Start supervisor
+exec s6-svscan /app/s6

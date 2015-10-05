@@ -1,4 +1,4 @@
-#!/usr/local/bin/babel-node
+#!/usr/bin/env babel-node
 /* jshint esnext:true, asi:true */
 
 import Yargs from 'yargs'
