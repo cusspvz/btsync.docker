@@ -1,5 +1,5 @@
 # btsync.docker
-A **32MB** docker image sync service built for persist data on clusters
+A **40MB** docker image sync service built for persist data on clusters
 
 ## Reliability
 Ready for production! Until now, its the only BTSync docker imaged that is

@@ -19,7 +19,7 @@ build:
 	@docker build -t cusspvz/btsync:${TAG}  .
 
 push: build
-	@docker push cusspvz/openwrt:${TAG}
+	@docker push cusspvz/btsync:${TAG}
 
 build-test-suite:
 	@docker build -t cusspvz/btsync:test-suite test/
