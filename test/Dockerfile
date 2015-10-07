@@ -1,6 +1,6 @@
 FROM alpine:edge
 MAINTAINER José Moreira <jose.moreira@findhit.com>
-ADD test /bin/test-btsync
-RUN apk --update add nfs-utils && \
+RUN apk --update add bash nfs-utils && \
     rm -fR /var/cache/apk/*
+ADD test.sh /bin/test-btsync
 CMD [ "/bin/test-btsync" ]

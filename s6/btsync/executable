@@ -1,0 +1,4 @@
+#!/bin/sh
+echo " -- BTSync --config $BTSYNC_CONFIG_PATH --nodaemon"
+exec btsync \
+    --config $BTSYNC_CONFIG_PATH --nodaemon

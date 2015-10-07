@@ -1,5 +1,19 @@
-FROM cusspvz/node:0.12.7
+FROM cusspvz/node:4.1.2
 MAINTAINER José Moreira <jose.moreira@findhit.com>
+
+ADD apks /tmp/apks
+
+RUN apk --update add s6 nfs-utils && \
+    apk add --allow-untrusted \
+        /tmp/apks/glibc-2.21-r2.apk \
+        /tmp/apks/glibc-bin-2.21-r2.apk \
+        && \
+    /usr/glibc/usr/bin/ldconfig /lib /usr/glibc/usr/lib && \
+    echo 'hosts: files mdns4_minimal [NOTFOUND=return] dns mdns4' >> /etc/nsswitch.conf && \
+    rm -fR /tmp/apks && \
+    rm -fR /var/cache/apk/* && \
+    echo "ALL:ALL" > /etc/hosts.allow && \
+    echo "" > /etc/hosts.deny
 
 ENV DEBUG="" \
     DATA_PATH=/data \
@@ -14,26 +28,16 @@ ENV DEBUG="" \
     BTSYNC_HOME=/home/btsync \
     NFS=1 \
     NFS_NUM_SERVERS=8 \
-    NFS_PORT=2049
+    NFS_PORT=2049 \
+    NODE_ENV=production
+
+ADD bin /app/bin/
+ADD s6 /app/s6/
+
+ADD package.json /app/package.json
+RUN npm install --production
 
 RUN mkdir /data && \
-    apk --update add \
-        bash s6 \
-        wget ca-certificates \
-        nfs-utils \
-    && \
-    mkdir -p /tmp/glibc && cd /tmp/glibc && \
-    wget --no-check-certificate \
-        "https://circle-artifacts.com/gh/andyshinn/alpine-pkg-glibc/6/artifacts/0/home/ubuntu/alpine-pkg-glibc/packages/x86_64/glibc-2.21-r2.apk" \
-        "https://circle-artifacts.com/gh/andyshinn/alpine-pkg-glibc/6/artifacts/0/home/ubuntu/alpine-pkg-glibc/packages/x86_64/glibc-bin-2.21-r2.apk" && \
-    apk add --allow-untrusted glibc-2.21-r2.apk glibc-bin-2.21-r2.apk && \
-    /usr/glibc/usr/bin/ldconfig /lib /usr/glibc/usr/lib && \
-    echo 'hosts: files mdns4_minimal [NOTFOUND=return] dns mdns4' >> /etc/nsswitch.conf && \
-    cd / && \
-    rm -fR /tmp/glibc && \
-    rm -fR /var/cache/apk/* && \
-    echo "ALL:ALL" > /etc/hosts.allow && \
-    echo "" > /etc/hosts.deny && \
     for bin in $(ls /app/bin/*); do \
         chmod +x $bin && \
         ln -s $bin /sbin/$(basename $bin); \
@@ -46,6 +50,6 @@ EXPOSE 111/tcp $NFS_PORT/tcp $NFS_PORT/udp
 # BTSync - comm + webui ports
 EXPOSE 55555/tcp 8888/tcp
 
-VOLUME [ $DATA_PATH ]
+VOLUME $DATA_PATH
 ENTRYPOINT [ "/sbin/entrypoint" ]
 CMD [ "" ]

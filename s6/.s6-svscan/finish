@@ -1,0 +1,11 @@
+#!/bin/sh
+
+echo "s6 finished all services"
+echo "doing last check..."
+
+kill $( pidof rpc.mountd )
+kill $( pidof rpcbind )
+kill $( pidof rpc.statd )
+kill $( pidof btsync )
+
+echo "Done."

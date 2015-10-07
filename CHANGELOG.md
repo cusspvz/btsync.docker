@@ -3,6 +3,7 @@
   Node.js pre-compiled.
 - Applied S6 supervisor
 - Code that initializes NFS Server was refactored
+- Added a Features test suite image
 
 ## 1.2.0
 - Remove constant chown repair

@@ -1,0 +1,3 @@
+#!/bin/sh
+
+echo "Container has crashed or CTRL + C has been detected"

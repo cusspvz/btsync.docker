@@ -1,7 +1,11 @@
-#!/bin/bash
+#!/bin/sh
+
+echo "### ENTRYPOINT BEGIN ###"
+echo $*
+echo "### ENTRYPOINT END ###"
 
 ctl () {
-    babel-node /app/bin/ctl \
+    node --harmony /app/bin/ctl \
         --pid-path="$BTSYNC_PID_PATH" \
         --config-path="$BTSYNC_CONFIG_PATH" \
         --host-data-path="$HOST_DATA_PATH" \
@@ -17,7 +21,7 @@ if [ "$1" == "ctl" ]; then
 fi
 
 if [ "$1" == "bash" ]; then
-    exec bash ${@:2};
+    exec /bin/sh -s # ${@:2};
     exit $?
 fi
 

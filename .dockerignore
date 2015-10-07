@@ -1,7 +1,4 @@
 *.md
-Makefile
-Dockerfile
 node_modules/
 .*
 *.log
-test/

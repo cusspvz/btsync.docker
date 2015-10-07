@@ -1,6 +1,10 @@
 # btsync.docker
 A **32MB** docker image sync service built for persist data on clusters
 
+## Reliability
+Ready for production! Until now, its the only BTSync docker imaged that is
+harassed with a test suite!
+
 ## Motivation
 
 #### CLUSTER PERSISTENT STORAGE
@@ -22,7 +26,7 @@ approach would be configuration sharing, and thats not useful.
 So, instead of creating an image that relied on `confd` (which is great btw),
 I've decided to work on btsync cli before going to sleep.
 
-## How it works?
+## How does it works?
 
 A cli will allow us to place a btsync service per cluster node (making use out of
 the ephemeral disk they mostly have) and control that service via `docker exec`.
@@ -196,3 +200,17 @@ Defaults to: 1000
 
 ### GID
 Defaults to: 1000
+
+## Development
+
+##### build and run a container
+`make run`
+
+##### build and run a container with bash command
+`make run-bash`
+
+##### just building a container
+`make build`
+
+##### build image, build test image, run multiple containers and harass them with test suite
+`make test`

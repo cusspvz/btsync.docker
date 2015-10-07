@@ -1,11 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
-# Configure PID file
-touch "$BTSYNC_PID_PATH"
-chown ${BTSYNC_UID}:${BTSYNC_GID} "$BTSYNC_PID_PATH"
-
-# Prepare path for config file
-mkdir -p `basename "$BTSYNC_CONFIG_PATH"`
-
-exec s6-setuidgid $BTSYNC_UID:$BTSYNC_GID \
-    btsync --config $BTSYNC_CONFIG_PATH
+exec s6-applyuidgid -u $BTSYNC_UID -g $BTSYNC_GID \
+    ./executable
