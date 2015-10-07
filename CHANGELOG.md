@@ -1,4 +1,7 @@
 ## Upcoming
+
+
+## 2.0.0
 - Base Image changed to `cusspvz/node` which is based on Alpine and comes with
   Node.js pre-compiled.
 - Applied S6 supervisor
