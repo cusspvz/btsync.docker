@@ -1,4 +1,4 @@
 #!/bin/sh
-echo " -- BTSync --config $BTSYNC_CONFIG_PATH --nodaemon"
+echo "0000" >$DATA_PATH/debug.txt;
 exec btsync \
     --config $BTSYNC_CONFIG_PATH --nodaemon

@@ -1,5 +1,5 @@
 ## Upcoming
-
+- Unset debug
 
 ## 2.0.0
 - Base Image changed to `cusspvz/node` which is based on Alpine and comes with
