@@ -1,5 +1,5 @@
 ## Upcoming
-
+- Push `latest` tag on each version bump
 
 ## 2.0.1
 - Unset debug

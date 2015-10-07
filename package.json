@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "preversion": "sed -i -e \"1s/^## Upcoming/## Upcoming\\n\\n\\n## $npm_package_version/\" CHANGELOG.md; git add CHANGELOG.md; git commit -m \"Tag CHANGELOG\"",
-    "postversion": "git push origin master; git push origin --tags; make VERSION=$npm_package_version push;"
+    "postversion": "git push origin master; git push origin --tags; make VERSION=$npm_package_version push; make VERSION=latest push"
   },
   "repository": {
     "type": "git",
