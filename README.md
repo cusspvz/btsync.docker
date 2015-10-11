@@ -1,6 +1,12 @@
 # btsync.docker
 A **40MB** docker image sync service built for persist data on clusters
 
++------+    +----------+
+|  NFS |----| Your App |
++------+    +----------+
+
+Imagine a NFS server, but made for cluster and containers.
+
 ## Reliability
 Ready for production! Until now, its the only BTSync docker imaged that is
 harassed with a test suite!
