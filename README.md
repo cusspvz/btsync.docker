@@ -1,9 +1,12 @@
 # btsync.docker
 A **40MB** docker image sync service built for persist data on clusters
 
+```
 +------+    +----------+
 |  NFS |----| Your App |
 +------+    +----------+
+```
+
 
 Imagine a NFS server, but made for cluster and containers.
 
